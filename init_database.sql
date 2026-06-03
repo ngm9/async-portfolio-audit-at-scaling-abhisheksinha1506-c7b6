@@ -2,38 +2,42 @@
 CREATE TABLE portfolios (
     id BIGSERIAL PRIMARY KEY,
     owner VARCHAR(100) NOT NULL,
-    name VARCHAR(100) NOT NULL
-    -- no unique(owner, name) constraint
+    name VARCHAR(100) NOT NULL,
+    CONSTRAINT uq_portfolio_owner_name UNIQUE (owner, name)
 );
 CREATE TABLE trades (
     id BIGSERIAL PRIMARY KEY,
-    portfolio_id BIGINT,
+    portfolio_id BIGINT NOT NULL,
     ticker VARCHAR(16) NOT NULL,
-    side VARCHAR(8),
-    amount FLOAT8,
-    price FLOAT8,
+    side VARCHAR(8) NOT NULL,
+    amount FLOAT8 NOT NULL,
+    price FLOAT8 NOT NULL,
     trade_time TIMESTAMP NOT NULL,
-    status VARCHAR(16),
-    FOREIGN KEY(portfolio_id) REFERENCES portfolios(id)
+    status VARCHAR(16) NOT NULL,
+    FOREIGN KEY(portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE
 );
 CREATE TABLE market_data (
     id BIGSERIAL PRIMARY KEY,
     ticker VARCHAR(16) NOT NULL,
     trade_time TIMESTAMP NOT NULL,
-    price FLOAT8,
-    volume FLOAT8,
+    price FLOAT8 NOT NULL,
+    volume FLOAT8 NOT NULL,
     extra_json JSON
-    -- no index on trade_time or ticker
 );
 CREATE TABLE audit_logs (
     id BIGSERIAL PRIMARY KEY,
-    trade_id BIGINT,
-    event_type VARCHAR(32),
+    trade_id BIGINT NOT NULL,
+    event_type VARCHAR(32) NOT NULL,
     event_data JSON NOT NULL,
     log_timestamp TIMESTAMP NOT NULL,
-    FOREIGN KEY(trade_id) REFERENCES trades(id)
-    -- no index on trade_id or log_timestamp, allows NULLs
+    FOREIGN KEY(trade_id) REFERENCES trades(id) ON DELETE CASCADE
 );
+
+-- Optimize queries with indexes
+CREATE INDEX idx_trades_portfolio_id ON trades(portfolio_id);
+CREATE INDEX idx_trades_ticker_time ON trades(ticker, trade_time DESC);
+CREATE INDEX idx_market_data_ticker_time ON market_data(ticker, trade_time DESC);
+CREATE INDEX idx_audit_logs_trade_id_time ON audit_logs(trade_id, log_timestamp DESC);
 -- Seed portfolios
 INSERT INTO portfolios (owner, name) VALUES ('alice', 'growth'), ('bob', 'value'), ('carol', 'daytrade');
 -- Seed trades and market_data
